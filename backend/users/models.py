@@ -16,7 +16,7 @@ class User(AbstractUser):
         (BUYER, 'Buyer'),
     ]
     name = models.CharField(max_length=100)
-
+#  users_user
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user_type = models.CharField(max_length=10, choices=USER_TYPE_CHOICES, default=BUYER)
     phone_number = models.CharField(max_length=10, blank=True)

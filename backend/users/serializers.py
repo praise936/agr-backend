@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from .models import User
-import re  # Missing import for re module
+import re
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     """Serializer for user registration"""
@@ -19,11 +19,19 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         ]
 
     def validate_name(self, value):
-        """Validate username format"""
+        """Validate username format and check if it already exists"""
+        # Check format
         if not re.match(r'^[\w.@+-]+$', value):
             raise serializers.ValidationError(
-                "name may contain only letters, numbers, and @/./+/-/_ characters"
+                "Name may contain only letters, numbers, and @/./+/-/_ characters"
             )
+        
+        # Check if username already exists
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError(
+                "This username is already taken. Please choose another one."
+            )
+        
         return value
     
     def validate_password(self, value):
@@ -38,22 +46,32 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         """Check that passwords match"""
         if data.get('password') != data.get('password2'):
             raise serializers.ValidationError({"password": "Passwords must match."})
-        return data  # Missing return statement
+        return data
     
     def create(self, validated_data):
         """Create and return a new user"""
         # Remove password2 as it's not needed for user creation
         validated_data.pop('password2')
         password = validated_data.pop('password')
+        
+        # Use name as username
         validated_data['username'] = validated_data.get('name')
         
-        # Create user
-        user = User.objects.create_user(
-            password=password,
-            **validated_data
-        )
-        
-        return user
+        try:
+            # Create user
+            user = User.objects.create_user(
+                username=validated_data['username'],
+                password=password,
+                **validated_data
+            )
+            return user
+        except Exception as e:
+            # Catch any database errors (like duplicate username)
+            if 'unique constraint' in str(e).lower() or 'duplicate' in str(e).lower():
+                raise serializers.ValidationError({
+                    'name': ['This username is already taken. Please choose another one.']
+                })
+            raise e
 
 class UserDetailSerializer(serializers.ModelSerializer):
     """Serializer for user details (read-only)"""
@@ -67,4 +85,3 @@ class UserDetailSerializer(serializers.ModelSerializer):
             'phone_number', 'profile_picture', 'location', 'date_joined',
             'product_count'  
         ]
-

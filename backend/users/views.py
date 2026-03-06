@@ -10,19 +10,20 @@ class RegisterView(generics.CreateAPIView):
     serializer_class = UserRegistrationSerializer
     permission_classes = [permissions.AllowAny]
     
-    def post(self, request, *args, **kwargs):
+    # You don't even need to override post() - CreateAPIView handles it automatically
+    # But if you want custom response, keep it as:
+    
+    def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         
-        
         return Response({
-            'user': UserDetailSerializer(user).data,
-            
-            'message': 'User created successfully'
+            'user': UserRegistrationSerializer(user).data,
+            'message': 'User created successfully',
         }, status=status.HTTP_201_CREATED)
 
-
+# users_user
 class UserProfileView(generics.RetrieveUpdateAPIView):
     """View and update user profile"""
     
