@@ -12,7 +12,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-fdns+!!7j)(k2!cv+#n$4g0s*ghv1-c2p%n1*ezrmlppf&r4%w'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ["*"]
 
@@ -44,7 +44,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-CORS_ALLOW_ALL_ORIGINS = True
+
 REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend',
@@ -61,7 +61,7 @@ REST_FRAMEWORK = {
 }
 # settings.py
 
-
+CORS_ALLOW_ALL_ORIGINS = True
 
 # Simple JWT Configuration
 from datetime import timedelta

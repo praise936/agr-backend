@@ -54,15 +54,18 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         validated_data.pop('password2')
         password = validated_data.pop('password')
         
-        # Use name as username
+        # Set username from name
         validated_data['username'] = validated_data.get('name')
         
+        # Pop username so it's not in **validated_data
+        username = validated_data.pop('username')
+        
         try:
-            # Create user
+            # Create user with explicit username
             user = User.objects.create_user(
-                username=validated_data['username'],
+                username=username,
                 password=password,
-                **validated_data
+                **validated_data  # Now contains all other fields except username
             )
             return user
         except Exception as e:
