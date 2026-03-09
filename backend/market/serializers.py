@@ -70,14 +70,28 @@ class CartSerializer(serializers.ModelSerializer):
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(read_only=True)
+    product_image_url = serializers.SerializerMethodField()
     
     class Meta:
         model = OrderItem
         fields = [
-            'id', 'product', 'product_name', 'quantity', 'unit',
-            'price_per_unit', 'subtotal', 'is_delivered','product_image'
+            'id', 'product', 'product_image', 'product_name', 'product_image_url',
+            'quantity', 'unit', 'price_per_unit', 'subtotal', 'is_delivered',
         ]
         read_only_fields = ['id', 'subtotal']
+
+    def get_product_image_url(self, obj):
+        # First check if order item has its own image URL
+        if obj.product_image_url:
+            return obj.product_image_url
+        
+        # If not, try to get from the related product
+        if obj.product and obj.product.image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.product.image.url)
+        
+        return None
 
 
 class OrderSerializer(serializers.ModelSerializer):

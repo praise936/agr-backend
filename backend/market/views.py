@@ -255,20 +255,27 @@ class CheckoutView(APIView):
                 status='pending'
             )
 
-            # Create order items and reduce stock
+            # Create order items and set image URL
             for cart_item in items:
+                product = cart_item.product
+                
+                # Get the full image URL
+                image_url = None
+                if product.image:
+                    # Build absolute URL using the request
+                    image_url = request.build_absolute_uri(product.image.url)
+                
                 OrderItem.objects.create(
                     order=order,
-                    product=cart_item.product,
-                    product_name=cart_item.product.name,
+                    product=product,
+                    product_name=product.name,
+                    product_image=product.image,  # Copy the actual image file
+                    product_image_url=image_url,   # Set the URL here!
                     quantity=cart_item.quantity,
-                    unit=cart_item.product.unit,
-                    price_per_unit=cart_item.product.price,
+                    unit=product.unit,
+                    price_per_unit=product.price,
                     subtotal=cart_item.subtotal
                 )
-                
-                # Reduce product stock
-                
 
             orders.append(order)
 
@@ -284,7 +291,6 @@ class CheckoutView(APIView):
             'orders': order_serializer.data,
             'order_numbers': [order.order_number for order in orders]
         }, status=status.HTTP_201_CREATED)
-
 
 class OrderListCreateView(generics.ListCreateAPIView):
     """List orders for farmer or create new order"""

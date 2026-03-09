@@ -67,8 +67,8 @@ CORS_ALLOW_ALL_ORIGINS = True
 from datetime import timedelta
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),  # Token expires in 60 minutes
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),     # Refresh token expires in 1 day
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=700),  # Token expires in 60 minutes
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=10),     # Refresh token expires in 1 day
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN': False,
@@ -91,8 +91,8 @@ SIMPLE_JWT = {
     'JTI_CLAIM': 'jti',
 
     'SLIDING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',
-    'SLIDING_TOKEN_LIFETIME': timedelta(minutes=5),
-    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
+    'SLIDING_TOKEN_LIFETIME': timedelta(days=4),
+    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=6),
 }
 ROOT_URLCONF = 'backend.urls'
 
