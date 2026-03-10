@@ -9,6 +9,7 @@ class ProductSerializer(serializers.ModelSerializer):
     farmer_name = serializers.CharField(source='farmer.get_full_name', read_only=True)
     image_url = serializers.SerializerMethodField()
     
+    
     class Meta:
         model = Produce
         fields = [
@@ -71,6 +72,7 @@ class CartSerializer(serializers.ModelSerializer):
 class OrderItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(read_only=True)
     product_image_url = serializers.SerializerMethodField()
+    
     
     class Meta:
         model = OrderItem
