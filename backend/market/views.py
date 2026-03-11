@@ -121,16 +121,13 @@ class CartView(APIView):
         quantity = request.data.get('quantity', 1)
 
         try:
-            quantity = float(quantity)
+            # Convert to Decimal instead of float
+            from decimal import Decimal
+            quantity = Decimal(str(quantity))
         except (TypeError, ValueError):
             return Response({'error': 'Invalid quantity'}, status=status.HTTP_400_BAD_REQUEST)
 
         product = get_object_or_404(Produce, id=product_id, is_available=True)
-
-        # if quantity > product.quantity_available:
-        #     return Response({
-        #         'error': f'Only {product.quantity_available} {product.unit}(s) available'
-        #     }, status=status.HTTP_400_BAD_REQUEST)
 
         cart_item, created = CartItem.objects.get_or_create(
             cart=cart,
@@ -139,6 +136,7 @@ class CartView(APIView):
         )
 
         if not created:
+            # Add using Decimal
             cart_item.quantity += quantity
             cart_item.save()
 
@@ -156,7 +154,8 @@ class CartView(APIView):
         quantity = request.data.get('quantity')
 
         try:
-            quantity = float(quantity)
+            from decimal import Decimal
+            quantity = Decimal(str(quantity))
         except (TypeError, ValueError):
             return Response({'error': 'Invalid quantity'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -166,11 +165,6 @@ class CartView(APIView):
             cart_item.delete()
             message = 'Item removed from cart'
         else:
-            if quantity > cart_item.product.quantity_available:
-                return Response({
-                    'error': f'Only {cart_item.product.quantity_available} {cart_item.product.unit}(s) available'
-                }, status=status.HTTP_400_BAD_REQUEST)
-            
             cart_item.quantity = quantity
             cart_item.save()
             message = 'Cart updated'

@@ -11,7 +11,7 @@ class ProductSerializer(serializers.ModelSerializer):
     
     # Cloudinary-specific fields
     image_url = serializers.SerializerMethodField()
-    image = serializers.SerializerMethodField()
+    
     image_public_id = serializers.CharField(source='image.public_id', read_only=True)
     thumbnail_url = serializers.SerializerMethodField()
     image_versions = serializers.SerializerMethodField()
@@ -61,7 +61,8 @@ class ProductSerializer(serializers.ModelSerializer):
 
 class CartItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
-    product_image = serializers.SerializerMethodField()
+    
+    # Remove 'product_image' from fields and use only these
     product_image_url = serializers.SerializerMethodField()
     product_thumbnail = serializers.SerializerMethodField()
     price_per_unit = serializers.DecimalField(source='product.price', max_digits=10, decimal_places=2, read_only=True)
@@ -70,20 +71,17 @@ class CartItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = CartItem
         fields = [
-            'id', 'product', 'product_name', 'product_image', 'product_image_url',
-            'product_thumbnail', 'quantity', 'price_per_unit', 'subtotal', 'added_at'
+            'id', 'product', 'product_name', 
+            'product_image_url', 'product_thumbnail',  # Removed 'product_image'
+            'quantity', 'price_per_unit', 'subtotal', 'added_at'
         ]
         read_only_fields = ['id', 'added_at']
 
-    def get_product_image(self, obj):
+    def get_product_image_url(self, obj):
         """Get the full image URL"""
         if obj.product and obj.product.image:
             return obj.product.image.url
         return None
-
-    def get_product_image_url(self, obj):
-        """Alias for product_image"""
-        return self.get_product_image(obj)
 
     def get_product_thumbnail(self, obj):
         """Get thumbnail version"""
