@@ -199,6 +199,8 @@ class CartView(APIView):
 
 # ==================== ORDER VIEWS ====================
 
+# In views.py, update the CheckoutView's post method
+
 class CheckoutView(APIView):
     """Process checkout and create order"""
     permission_classes = [AllowAny]
@@ -259,18 +261,23 @@ class CheckoutView(APIView):
             for cart_item in items:
                 product = cart_item.product
                 
-                # Get the full image URL
+                # Get the Cloudinary URL - no need to build absolute URL!
+                # Cloudinary URLs are already absolute
                 image_url = None
                 if product.image:
-                    # Build absolute URL using the request
-                    image_url = request.build_absolute_uri(product.image.url)
+                    image_url = product.image.url  # This is already a full URL
+                
+                # Get thumbnail URL for potential use
+                thumbnail_url = None
+                if product.image:
+                    thumbnail_url = product.image.build_url(width=100, height=100, crop='thumb')
                 
                 OrderItem.objects.create(
                     order=order,
                     product=product,
                     product_name=product.name,
-                    product_image=product.image,  # Copy the actual image file
-                    product_image_url=image_url,   # Set the URL here!
+                    product_image=None,  # We don't need to store the file anymore
+                    product_image_url=image_url,  # Store the Cloudinary URL
                     quantity=cart_item.quantity,
                     unit=product.unit,
                     price_per_unit=product.price,
@@ -283,7 +290,7 @@ class CheckoutView(APIView):
         cart.is_active = False
         cart.save()
 
-        # Serialize orders
+        # Serialize orders with request context
         order_serializer = OrderSerializer(orders, many=True, context={'request': request})
         
         return Response({

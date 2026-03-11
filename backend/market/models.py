@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 import uuid
+from cloudinary.models import CloudinaryField
 
 User = get_user_model()
 
@@ -26,7 +27,19 @@ class Produce(models.Model):
 
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True, null=True)
-    image = models.ImageField(upload_to='products/', blank=True, null=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    # Cloudinary field for image storage
+    image = CloudinaryField(
+        'image',  # Public ID prefix
+        folder='products/',  # Organize in folders
+        resource_type='image',
+        transformation=[
+            {'width': 600, 'height': 400, 'crop': 'limit'}  # Optional default transformation
+        ],
+        blank=True,
+        null=True
+    )
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='Sukuma')
     unit = models.CharField(max_length=20, choices=UNIT_CHOICES, default='bundle')
     price = models.DecimalField(max_digits=10, decimal_places=2)
@@ -43,6 +56,23 @@ class Produce(models.Model):
             models.Index(fields=['category']),
             models.Index(fields=['location']),
         ]
+    
+    @property
+    def image_public_id(self):
+        """Get the Cloudinary public ID for frontend use"""
+        return self.image.public_id if self.image else None
+    @property
+    def image_versions(self):
+        """Get different sized versions of the image"""
+        if not self.image:
+            return None
+        return {
+            'thumbnail': self.image.build_url(width=100, height=100, crop='thumb'),
+            'small': self.image.build_url(width=300, height=200, crop='limit'),
+            'medium': self.image.build_url(width=600, height=400, crop='limit'),
+            'large': self.image.build_url(width=1200, height=800, crop='limit'),
+        }
+
 
     def __str__(self):
         return f"{self.name} - {self.farmer.get_full_name() or self.farmer.email}"

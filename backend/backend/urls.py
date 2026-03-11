@@ -5,8 +5,8 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('market.urls')),  # replace 'yourapp' with actual app name
-    path('api/auth/', include('users.urls')),  # replace 'yourapp' with actual app name
+    path('api/', include('market.urls')),  
+    path('api/auth/', include('users.urls')), 
 ]
 
 # if settings.DEBUG:

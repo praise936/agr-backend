@@ -3,37 +3,67 @@ from .models import Produce, Order, OrderItem, Cart, CartItem
 from users.serializers import UserDetailSerializer
 from django.db import transaction
 from django.utils import timezone
+import cloudinary.uploader
 
 class ProductSerializer(serializers.ModelSerializer):
     farmer_details = UserDetailSerializer(source='farmer', read_only=True)
     farmer_name = serializers.CharField(source='farmer.get_full_name', read_only=True)
-    image_url = serializers.SerializerMethodField()
     
+    # Cloudinary-specific fields
+    image_url = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()
+    image_public_id = serializers.CharField(source='image.public_id', read_only=True)
+    thumbnail_url = serializers.SerializerMethodField()
+    image_versions = serializers.SerializerMethodField()
     
     class Meta:
         model = Produce
         fields = [
             'id', 'name', 'description', 'price', 'farmer', 'farmer_details',
             'farmer_name', 'location', 'category', 'is_available',
-            'image', 'image_url', 'unit',
-            'created_at', 'updated_at'
+            'image', 'image_url', 'image_public_id', 'thumbnail_url', 'image_versions',
+            'unit', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'farmer']
 
     def get_image_url(self, obj):
+        """Get the full Cloudinary URL"""
         if obj.image:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.image.url)
+            return obj.image.url
         return None
 
-    
+    def get_image(self, obj):
+        """Get the image URL (alias for backward compatibility)"""
+        return self.get_image_url(obj)
+
+    def get_thumbnail_url(self, obj):
+        """Get a thumbnail version of the image"""
+        if obj.image:
+            return obj.image.build_url(width=100, height=100, crop='thumb')
+        return None
+
+    def get_image_versions(self, obj):
+        """Get multiple sized versions of the image"""
+        if not obj.image:
+            return None
+        return {
+            'thumbnail': obj.image.build_url(width=100, height=100, crop='thumb'),
+            'small': obj.image.build_url(width=300, height=200, crop='limit'),
+            'medium': obj.image.build_url(width=600, height=400, crop='limit'),
+            'large': obj.image.build_url(width=1200, height=800, crop='limit'),
+        }
+
+    def create(self, validated_data):
+        """Handle image upload through Cloudinary"""
+        # The CloudinaryField handles the upload automatically
+        return super().create(validated_data)
 
 
 class CartItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
-    product_image = serializers.ImageField(source='product.image', read_only=True)
+    product_image = serializers.SerializerMethodField()
     product_image_url = serializers.SerializerMethodField()
+    product_thumbnail = serializers.SerializerMethodField()
     price_per_unit = serializers.DecimalField(source='product.price', max_digits=10, decimal_places=2, read_only=True)
     subtotal = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     
@@ -41,15 +71,24 @@ class CartItemSerializer(serializers.ModelSerializer):
         model = CartItem
         fields = [
             'id', 'product', 'product_name', 'product_image', 'product_image_url',
-            'quantity', 'price_per_unit', 'subtotal', 'added_at'
+            'product_thumbnail', 'quantity', 'price_per_unit', 'subtotal', 'added_at'
         ]
         read_only_fields = ['id', 'added_at']
 
-    def get_product_image_url(self, obj):
+    def get_product_image(self, obj):
+        """Get the full image URL"""
         if obj.product and obj.product.image:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.product.image.url)
+            return obj.product.image.url
+        return None
+
+    def get_product_image_url(self, obj):
+        """Alias for product_image"""
+        return self.get_product_image(obj)
+
+    def get_product_thumbnail(self, obj):
+        """Get thumbnail version"""
+        if obj.product and obj.product.image:
+            return obj.product.image.build_url(width=100, height=100, crop='thumb')
         return None
 
     def validate_quantity(self, value):
@@ -72,27 +111,32 @@ class CartSerializer(serializers.ModelSerializer):
 class OrderItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(read_only=True)
     product_image_url = serializers.SerializerMethodField()
-    
+    product_thumbnail_url = serializers.SerializerMethodField()
     
     class Meta:
         model = OrderItem
         fields = [
-            'id', 'product', 'product_image', 'product_name', 'product_image_url',
+            'id', 'product', 'product_name', 'product_image_url', 'product_thumbnail_url',
             'quantity', 'unit', 'price_per_unit', 'subtotal', 'is_delivered',
         ]
         read_only_fields = ['id', 'subtotal']
 
     def get_product_image_url(self, obj):
+        """Get the full Cloudinary URL"""
         # First check if order item has its own image URL
         if obj.product_image_url:
             return obj.product_image_url
         
         # If not, try to get from the related product
         if obj.product and obj.product.image:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.product.image.url)
+            return obj.product.image.url
         
+        return None
+
+    def get_product_thumbnail_url(self, obj):
+        """Get thumbnail version"""
+        if obj.product and obj.product.image:
+            return obj.product.image.build_url(width=100, height=100, crop='thumb')
         return None
 
 
@@ -138,23 +182,11 @@ class CheckoutSerializer(serializers.Serializer):
             raise serializers.ValidationError("Invalid phone number format")
         return value
 
-    def validate(self, data):
-        # You could add more validation here (e.g., check if cart exists)
-        return data
-
 
 class OrderStatusUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ['status', 'payment_status', 'estimated_delivery_time', 'tracking_number']
-
-    def validate_status(self, value):
-        valid_statuses = ['confirmed', 'processing', 'out_for_delivery', 'delivered', 'cancelled']
-        if value not in valid_statuses:
-            raise serializers.ValidationError(
-                f"Invalid status. Choose from: {', '.join(valid_statuses)}"
-            )
-        return value
 
 
 class OrderCreateSerializer(serializers.ModelSerializer):
@@ -170,8 +202,3 @@ class OrderCreateSerializer(serializers.ModelSerializer):
             'created_at', 'items'
         ]
         read_only_fields = ['id', 'order_number', 'created_at', 'subtotal', 'total_amount']
-
-    @transaction.atomic
-    def create(self, validated_data):
-        # This will be implemented in the view
-        pass
